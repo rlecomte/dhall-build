@@ -1,0 +1,47 @@
+name: Dhall
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'tag'
+        required: false
+
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  ci:
+    runs-on: linux/arm64
+    strategy:
+      fail-fast: false # https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#jobsjob_idstrategyfail-fast
+      matrix:
+        os: [ ubuntu-latest ] # windows-latest, macos-latest  #disabled for cost efficiency
+    steps:
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
+
+      - uses: actions/checkout@v3
+        with:
+          name: dhall-lang/haskell
+          ref: 1.41.1
+
+      - uses: haskell/actions/setup@v1.2
+        with:
+          ghc-version: 8.10.7
+          cabal-version: 2.4
+
+      - run: cabal v2-update
+
+      - name: Cache ~/.cabal/store and dist-newstyle
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-${{ matrix.ghc }}
+
+      - run: cabal v2-build dhall
+
